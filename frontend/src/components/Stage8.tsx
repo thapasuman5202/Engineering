@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getStagePath, postStagePath } from '../lib/api'
+import ErrorMessage from './ErrorMessage'
 
 interface PlanType {
   stage: number
@@ -21,15 +22,28 @@ export default function Stage8() {
   const [plan, setPlan] = useState<PlanType | null>(null)
   const [telemetryRes, setTelemetryRes] = useState<TelemetryResponse | null>(null)
   const [input, setInput] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   const fetchPlan = async () => {
-    const res = (await getStagePath(8, 'plan')) as PlanType
-    setPlan(res)
+    try {
+      setError(null)
+      const res = (await getStagePath(8, 'plan')) as PlanType
+      setPlan(res)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error'
+      setError(message)
+    }
   }
   const sendTelemetry = async () => {
-    const res = (await postStagePath(8, 'telemetry', { message: input })) as TelemetryResponse
-    setTelemetryRes(res)
-    setInput('')
+    try {
+      setError(null)
+      const res = (await postStagePath(8, 'telemetry', { message: input })) as TelemetryResponse
+      setTelemetryRes(res)
+      setInput('')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error'
+      setError(message)
+    }
   }
 
   return (
@@ -40,6 +54,7 @@ export default function Stage8() {
         <input className="border p-1 flex-1" value={input} onChange={e => setInput(e.target.value)} />
         <button className="bg-green-500 text-white px-2 py-1" onClick={sendTelemetry}>Send Telemetry</button>
       </div>
+      <ErrorMessage message={error} />
       {plan && <pre className="mt-2 bg-gray-100 p-2 text-sm">{JSON.stringify(plan, null, 2)}</pre>}
       {telemetryRes && <pre className="mt-2 bg-gray-100 p-2 text-sm">{JSON.stringify(telemetryRes, null, 2)}</pre>}
     </div>

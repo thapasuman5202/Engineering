@@ -1,15 +1,31 @@
 import { useState } from 'react'
 import { getStagePath, postStagePath } from '../lib/api'
+import ErrorMessage from './ErrorMessage'
 
 export default function Stage9() {
   const [wellness, setWellness] = useState<any>(null)
   const [tuningRes, setTuningRes] = useState<any>(null)
   const [input, setInput] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
-  const fetchWellness = async () => setWellness(await getStagePath(9, 'wellness'))
+  const fetchWellness = async () => {
+    try {
+      setError(null)
+      setWellness(await getStagePath(9, 'wellness'))
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error'
+      setError(message)
+    }
+  }
   const sendTuning = async () => {
-    setTuningRes(await postStagePath(9, 'tuning', { value: input }))
-    setInput('')
+    try {
+      setError(null)
+      setTuningRes(await postStagePath(9, 'tuning', { value: input }))
+      setInput('')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error'
+      setError(message)
+    }
   }
 
   return (
@@ -20,6 +36,7 @@ export default function Stage9() {
         <input className="border p-1 flex-1" value={input} onChange={e => setInput(e.target.value)} />
         <button className="bg-green-500 text-white px-2 py-1" onClick={sendTuning}>Send Tuning</button>
       </div>
+      <ErrorMessage message={error} />
       {wellness && <pre className="mt-2 bg-gray-100 p-2 text-sm">{JSON.stringify(wellness, null, 2)}</pre>}
       {tuningRes && <pre className="mt-2 bg-gray-100 p-2 text-sm">{JSON.stringify(tuningRes, null, 2)}</pre>}
     </div>
