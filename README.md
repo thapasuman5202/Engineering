@@ -3,7 +3,7 @@
 This repository hosts a full-stack platform implementing the God-Mode Ultra Flow vision. The system orchestrates generative design and construction workflows across twelve stages:
 
 0. Context ingestion
-1. Multi-agent variant generation
+1. Multi-agent variant generation (combinatorial attribute exploration)
 2. Surrogate multiphysics analysis
 3. Multi-objective optimization
 4. Compliance & authority pre-check
