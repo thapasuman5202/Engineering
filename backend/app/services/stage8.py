@@ -1,3 +1,5 @@
+"""Telemetry collection and scheduling utilities for Stage 8."""
+
 from typing import Any, Dict, List, Callable, Tuple, Optional
 import threading
 import time
@@ -19,6 +21,15 @@ class Stage8Service:
         self._worker_thread: Optional[threading.Thread] = None
 
     def telemetry(self, data: Dict[str, Any]) -> StageResult:
+        """Record incoming telemetry data.
+
+        Args:
+            data: Arbitrary sensor readings or status information.
+
+        Returns:
+            StageResult: Count of telemetry records stored.
+        """
+
         self.telemetry_log.append(data)
         return StageResult(
             stage=8,
@@ -27,6 +38,12 @@ class Stage8Service:
         )
 
     def plan(self) -> StageResult:
+        """Return the current execution plan.
+
+        Returns:
+            StageResult: Tasks scheduled for Stage 8 operations.
+        """
+
         return StageResult(stage=8, status="current plan", data=self.current_plan)
 
     def scheduler(self, task: Callable[[], Any], delay: float = 0.0) -> None:
