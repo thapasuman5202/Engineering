@@ -29,3 +29,8 @@ def test_generate_variants_custom_options():
         "L_green",
     ]
 
+
+def test_generate_variants_empty_options():
+    negotiator = Negotiator()
+    assert negotiator.generate_variants({}) == []
+
