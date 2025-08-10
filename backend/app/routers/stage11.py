@@ -1,3 +1,5 @@
+"""API router for Stage 11 salvage and matching endpoints."""
+
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends
@@ -12,10 +14,29 @@ router = APIRouter(prefix="/stage11", tags=["Stage 11"])
 def salvage(
     payload: Dict[str, Any],
     service: Stage11Service = Depends(Stage11Service),
-):
+) -> StageResult:
+    """Record a salvage report.
+
+    Args:
+        payload: Details about recovered components.
+        service: Stage 11 business logic provider.
+
+    Returns:
+        StageResult: Count of salvage reports stored.
+    """
+
     return service.salvage(payload)
 
 
 @router.get("/match", response_model=StageResult)
-def match(service: Stage11Service = Depends(Stage11Service)):
+def match(service: Stage11Service = Depends(Stage11Service)) -> StageResult:
+    """Retrieve current matching information.
+
+    Args:
+        service: Stage 11 business logic provider.
+
+    Returns:
+        StageResult: Match data for salvaged parts.
+    """
+
     return service.match()
