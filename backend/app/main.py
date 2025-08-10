@@ -9,6 +9,10 @@ from app.routers import (
     stage5,
     stage6,
     stage7,
+    stage8,
+    stage9,
+    stage10,
+    stage11,
 )
 
 app = FastAPI(title=settings.app_name)
@@ -21,6 +25,10 @@ app.include_router(stage4.router)
 app.include_router(stage5.router)
 app.include_router(stage6.router)
 app.include_router(stage7.router)
+app.include_router(stage8.router)
+app.include_router(stage9.router)
+app.include_router(stage10.router)
+app.include_router(stage11.router)
 
 
 @app.get("/")
