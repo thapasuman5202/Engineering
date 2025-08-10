@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { getStagePath, postStagePath, StageResult } from '../lib/api'
+import { getStagePath, postStagePath } from '../lib/api'
+import type { StageResult } from '../lib/StageResult'
 import ErrorMessage from './ErrorMessage'
 
 export default function Stage10() {

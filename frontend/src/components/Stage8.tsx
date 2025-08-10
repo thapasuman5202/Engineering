@@ -1,22 +1,17 @@
 import { useState } from 'react'
 import { getStagePath, postStagePath } from '../lib/api'
+import type { StageResult } from '../lib/StageResult'
 import ErrorMessage from './ErrorMessage'
 
-interface PlanType {
-  stage: number
-  status: string
-  data: {
-    tasks: any[]
-  }
+interface PlanData {
+  tasks: any[]
 }
+type PlanType = StageResult & { data: PlanData }
 
-interface TelemetryResponse {
-  stage: number
-  status: string
-  data: {
-    count: number
-  }
+interface TelemetryData {
+  count: number
 }
+type TelemetryResponse = StageResult & { data: TelemetryData }
 
 export default function Stage8() {
   const [plan, setPlan] = useState<PlanType | null>(null)
