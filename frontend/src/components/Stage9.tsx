@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { getStagePath, postStagePath } from '../lib/api'
+import { getStagePath, postStagePath, StageResult } from '../lib/api'
 import ErrorMessage from './ErrorMessage'
 
 export default function Stage9() {
-  const [wellness, setWellness] = useState<any>(null)
-  const [tuningRes, setTuningRes] = useState<any>(null)
+  const [wellness, setWellness] = useState<StageResult | null>(null)
+  const [tuningRes, setTuningRes] = useState<StageResult | null>(null)
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const fetchWellness = async () => {
     try {
       setError(null)
-      setWellness(await getStagePath(9, 'wellness'))
+      setWellness(await getStagePath<StageResult>(9, 'wellness'))
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
       setError(message)
@@ -20,7 +20,7 @@ export default function Stage9() {
   const sendTuning = async () => {
     try {
       setError(null)
-      setTuningRes(await postStagePath(9, 'tuning', { value: input }))
+      setTuningRes(await postStagePath<StageResult>(9, 'tuning', { value: input }))
       setInput('')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'

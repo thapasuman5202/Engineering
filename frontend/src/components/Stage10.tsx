@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { getStagePath, postStagePath } from '../lib/api'
+import { getStagePath, postStagePath, StageResult } from '../lib/api'
 import ErrorMessage from './ErrorMessage'
 
 export default function Stage10() {
-  const [resilience, setResilience] = useState<any>(null)
-  const [revenueRes, setRevenueRes] = useState<any>(null)
+  const [resilience, setResilience] = useState<StageResult | null>(null)
+  const [revenueRes, setRevenueRes] = useState<StageResult | null>(null)
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const fetchResilience = async () => {
     try {
       setError(null)
-      setResilience(await getStagePath(10, 'resilience'))
+      setResilience(await getStagePath<StageResult>(10, 'resilience'))
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
       setError(message)
@@ -20,7 +20,7 @@ export default function Stage10() {
   const sendRevenue = async () => {
     try {
       setError(null)
-      setRevenueRes(await postStagePath(10, 'revenue', { value: input }))
+      setRevenueRes(await postStagePath<StageResult>(10, 'revenue', { value: input }))
       setInput('')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'

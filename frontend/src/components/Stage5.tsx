@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { runStage } from '../lib/api'
+import { runStage, StageResult } from '../lib/api'
 import ErrorMessage from './ErrorMessage'
 
 export default function Stage5() {
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<StageResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const handle = async () => {
     try {

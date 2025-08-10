@@ -27,7 +27,7 @@ export default function Stage8() {
   const fetchPlan = async () => {
     try {
       setError(null)
-      const res = (await getStagePath(8, 'plan')) as PlanType
+      const res = await getStagePath<PlanType>(8, 'plan')
       setPlan(res)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
@@ -37,7 +37,7 @@ export default function Stage8() {
   const sendTelemetry = async () => {
     try {
       setError(null)
-      const res = (await postStagePath(8, 'telemetry', { message: input })) as TelemetryResponse
+      const res = await postStagePath<TelemetryResponse>(8, 'telemetry', { message: input })
       setTelemetryRes(res)
       setInput('')
     } catch (e) {
