@@ -31,7 +31,10 @@ class Negotiator:
             underscores. An empty options mapping yields an empty list.
         """
 
-        opts = options or self.base_options
+        # ``None`` indicates that the caller wants to use the negotiator's
+        # ``base_options``. An explicit empty dict should be respected as-is
+        # to allow calls like ``generate_variants({})`` to yield an empty list.
+        opts = self.base_options if options is None else options
         if not opts:
             return []
 
