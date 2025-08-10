@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install fastapi uvicorn[standard] pydantic httpx
+      - name: Run API smoke test
+        run: |
+          PYTHONPATH=backend python - <<'PY'
+from fastapi.testclient import TestClient
+from app.main import app
+client = TestClient(app)
+assert client.get('/stage0').status_code == 200
+PY
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
