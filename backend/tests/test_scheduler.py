@@ -1,10 +1,7 @@
-import os
-import sys
 import time
 
 import pytest
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from app.services.stage8 import Stage8Service
 
 
