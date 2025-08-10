@@ -34,8 +34,9 @@ The backend will be available at `http://localhost:8000` and the frontend at `ht
 
 ## Environment Variables
 
-The backend uses `pydantic.BaseSettings` for configuration. Values can be supplied
-via environment variables or a `.env` file in the `backend` directory.
+The backend uses the `pydantic-settings` package for configuration, built atop
+`pydantic.BaseSettings`. Values can be supplied via environment variables or a
+`.env` file in the `backend` directory.
 
 | Variable  | Description                                | Default               |
 |-----------|--------------------------------------------|-----------------------|

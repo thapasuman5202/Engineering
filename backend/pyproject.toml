@@ -6,7 +6,8 @@ dependencies = [
     "uvicorn[standard]",
     "pydantic",
     "httpx",
-    "pytest"
+    "pytest",
+    "pydantic-settings>=2.0.0"
 ]
 
 [build-system]
