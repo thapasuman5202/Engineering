@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>God-Mode (Kathmandu Pilot)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:20px;max-width:1100px}
+    .card{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0}
+    label{display:block;margin:8px 0 4px}
+    input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px}
+    button{padding:12px 18px;border:0;border-radius:10px;cursor:pointer}
+    .primary{background:#111;color:#fff}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:900px){.row{grid-template-columns:1fr}}
+    pre{background:#f7f7f7;padding:10px;border-radius:8px;overflow:auto}
+    .bar{height:10px;background:#eee;border-radius:6px;overflow:hidden}
+    .fill{height:10px;width:0;background:#4a90e2;transition:width .3s}
+    .muted{color:#666}
+    #viewer{width:100%;height:420px;background:#000;border-radius:12px}
+  </style>
+</head>
+<body>
+  <h1>God-Mode (Kathmandu Pilot)</h1>
+  <p class="muted">One tap → progress → 3D preview → PDFs/CSV/GLTF/IFC (IFC if available).</p>
+
+  <div class="card">
+    <div class="row">
+      <div><label>Address</label><input id="address" placeholder="Kathmandu…"/></div>
+      <div><label>Jurisdiction</label><input id="jurisdiction" value="NP-KTM"/></div>
+    </div>
+    <div class="row">
+      <div><label>Latitude</label><input id="lat" value="27.7172"/></div>
+      <div><label>Longitude</label><input id="lon" value="85.3240"/></div>
+    </div>
+    <div class="row">
+      <div><label>Typology</label>
+        <select id="typology"><option>Residential</option><option>Office</option><option>School</option></select></div>
+      <div><label>Gross Floor Area (m²)</label><input id="gfa" value="18000"/></div>
+    </div>
+    <div class="row">
+      <div><label>Floors Above</label><input id="floorsAbove" value="10"/></div>
+      <div><label>Max Height (m)</label><input id="maxHeight" value="36"/></div>
+    </div>
+    <div class="row">
+      <div><label>Setbacks (m) — front / side / rear</label><input id="setbacks" value="6,3,6"/></div>
+      <div><label>Styles (comma-separated)</label><input id="styles" value="vernacular,minimal"/></div>
+    </div>
+    <label>Uploads (optional, URL)</label>
+    <input id="uploads" placeholder="s3://…/borelogs.zip"/>
+
+    <div style="margin-top:12px">
+      <button class="primary" onclick="run()">Run God-Mode</button>
+    </div>
+  </div>
+
+  <div id="status" class="card" style="display:none">
+    <b>Status:</b> <span id="step">queued</span>
+    <div class="bar" style="margin-top:8px"><div id="fill" class="fill"></div></div>
+    <div class="muted" id="pct" style="margin-top:6px">0%</div>
+  </div>
+
+  <div id="viewerCard" class="card" style="display:none">
+    <h3>3D Preview (GLTF)</h3>
+    <div id="viewer"></div>
+  </div>
+
+  <div id="result" class="card" style="display:none"></div>
+
+  <!-- Three.js (CDN, classic scripts so it also works from file://) -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+let pollTimer = null;
+
+async function pollStatus(runId){
+  const s = await fetch(`http://127.0.0.1:5000/runs/${runId}/status`).then(r=>r.json());
+  document.getElementById('status').style.display = 'block';
+  document.getElementById('step').innerText = `${s.step} (${s.state})`;
+  document.getElementById('pct').innerText = `${s.percent}%`;
+  document.getElementById('fill').style.width = `${s.percent}%`;
+
+  if(s.state === 'SUCCEEDED'){
+    clearInterval(pollTimer);
+    const summary = await fetch(`http://127.0.0.1:5000/runs/${runId}`).then(r=>r.json());
+    renderResult(summary);
+    loadGLTF(runId);
+  } else if(s.state === 'FAILED'){
+    clearInterval(pollTimer);
+    alert('Run failed: ' + (s.error || 'Unknown error'));
+  }
+}
+
+function renderResult(summary){
+  const box = document.getElementById('result');
+  box.style.display = "block";
+  const zipUrl = `http://127.0.0.1:5000/runs/${summary.runId}/zip`;
+  const arts = (summary.artifacts||[]);
+  box.innerHTML = `
+    <h3>Run Completed</h3>
+    <p><b>Run ID:</b> ${summary.runId}</p>
+    <p><a href="${zipUrl}" target="_blank">⬇️ Download all outputs (ZIP)</a></p>
+    <h4>Artifacts</h4>
+    <ul>${arts.map(a=>`<li><a target="_blank" href="http://127.0.0.1:5000/runs/${summary.runId}/artifacts/${a}">${a}</a></li>`).join('') || '<li>(none)</li>'}</ul>
+    <details><summary>Raw Response</summary><pre>${escapeHtml(JSON.stringify(summary,null,2))}</pre></details>
+  `;
+}
+
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function loadGLTF(runId){
+  document.getElementById('viewerCard').style.display = 'block';
+  const container = document.getElementById('viewer');
+  container.innerHTML = '';
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0f0f0);
+  const camera = new THREE.PerspectiveCamera(60, container.clientWidth/container.clientHeight, 0.1, 10000);
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(renderer.domElement);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+  const dir = new THREE.DirectionalLight(0xffffff, 1); dir.position.set(30,60,30); scene.add(dir);
+  scene.add(new THREE.GridHelper(200,20));
+
+  const loader = new THREE.GLTFLoader();
+  const url = `http://127.0.0.1:5000/runs/${runId}/artifacts/variant_01.gltf`;
+  loader.load(url, (gltf)=>{
+    const root = gltf.scene;
+    scene.add(root);
+
+    // Auto-frame camera on model
+    const box = new THREE.Box3().setFromObject(root);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const center = new THREE.Vector3(); box.getCenter(center);
+    const maxDim = Math.max(size.x,size.y,size.z)||10;
+    const camDist = maxDim*2.0;
+    camera.position.set(center.x+camDist, center.y+camDist, center.z+camDist);
+    camera.near = 0.1; camera.far = camDist*20; camera.updateProjectionMatrix();
+    controls.target.copy(center); controls.update();
+
+    animate();
+  }, undefined, (err)=>{
+    console.warn('GLTF load failed:', err);
+  });
+
+  window.addEventListener('resize', ()=>{
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    camera.aspect = container.clientWidth/container.clientHeight;
+    camera.updateProjectionMatrix();
+  });
+
+  function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); }
+}
+
+async function run(){
+  const [front,side,rear] = document.getElementById('setbacks').value.split(',').map(x=>parseFloat(x.trim()||'0'));
+  const payload = {
+    projectId: "KTM-RES-PILOT-01",
+    site: { address: document.getElementById('address').value || "Kathmandu",
+            lat: parseFloat(document.getElementById('lat').value),
+            lon: parseFloat(document.getElementById('lon').value),
+            jurisdiction: document.getElementById('jurisdiction').value || "NP-KTM" },
+    program: { typology: document.getElementById('typology').value,
+               grossFloorArea_m2: parseFloat(document.getElementById('gfa').value),
+               floorsAbove: parseInt(document.getElementById('floorsAbove').value||'0') },
+    constraints: { maxHeight_m: parseFloat(document.getElementById('maxHeight').value),
+                   setbacks_m: { front, side, rear } },
+    preferences: { styles: document.getElementById('styles').value.split(',').map(s=>s.trim()).filter(Boolean) },
+    uploads: (document.getElementById('uploads').value ? [document.getElementById('uploads').value] : [])
+  };
+
+  const res = await fetch("http://127.0.0.1:5000/v1/run", {
+    method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  document.getElementById('status').style.display='block';
+  pollTimer = setInterval(()=>pollStatus(data.runId), 800);
+}
+</script>
+</body>
+</html>

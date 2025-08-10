@@ -1,0 +1,8 @@
+Flask==3.0.0
+flask-cors>=4.0.0
+reportlab>=4.2.0
+PyYAML>=6.0.1
+numpy>=1.26
+pygltflib>=1.16.1
+# Optional (IFC export). If it fails on Python 3.13, skip it and the app will gracefully fall back:
+ifcopenshell>=0.7.0

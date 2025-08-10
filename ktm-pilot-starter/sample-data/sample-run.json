@@ -1,0 +1,29 @@
+{
+  "projectId": "KTM-RES-PILOT-01",
+  "site": {
+    "address": "Kathmandu",
+    "lat": 27.7172,
+    "lon": 85.324,
+    "jurisdiction": "NP-KTM"
+  },
+  "program": {
+    "typology": "Residential",
+    "grossFloorArea_m2": 18000,
+    "floorsAbove": 10
+  },
+  "constraints": {
+    "maxHeight_m": 36,
+    "setbacks_m": {
+      "front": 6,
+      "side": 3,
+      "rear": 6
+    }
+  },
+  "preferences": {
+    "styles": [
+      "vernacular",
+      "minimal"
+    ]
+  },
+  "uploads": []
+}
