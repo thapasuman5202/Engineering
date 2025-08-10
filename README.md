@@ -40,4 +40,5 @@ The backend uses the `pydantic-settings` package for configuration, built atop
 
 | Variable  | Description                                | Default               |
 |-----------|--------------------------------------------|-----------------------|
-| `APP_NAME` | Title used for the FastAPI application.    | `"God Mode Ultra Flow"` |
+| `APP_NAME` | Title used for the FastAPI backend.    | `"God Mode Ultra Flow"` |
+| `VITE_API_BASE` | Base URL the frontend uses for API requests. | `http://localhost:8000` |
