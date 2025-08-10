@@ -1,18 +1,24 @@
+import type { StageResult } from './StageResult'
+
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
-export async function runStage(stage: number) {
+export async function runStage(stage: number): Promise<StageResult> {
   const res = await fetch(`${API_BASE}/stage${stage}`)
   if (!res.ok) throw new Error('request failed')
   return res.json()
 }
 
-export async function getStagePath(stage: number, path: string) {
+export async function getStagePath(stage: number, path: string): Promise<StageResult> {
   const res = await fetch(`${API_BASE}/stage${stage}/${path}`)
   if (!res.ok) throw new Error('request failed')
   return res.json()
 }
 
-export async function postStagePath(stage: number, path: string, data: any) {
+export async function postStagePath(
+  stage: number,
+  path: string,
+  data: unknown
+): Promise<StageResult> {
   const res = await fetch(`${API_BASE}/stage${stage}/${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { getStagePath, postStagePath } from '../lib/api'
+import type { StageResult } from '../lib/StageResult'
 import ErrorMessage from './ErrorMessage'
 
 export default function Stage11() {
-  const [match, setMatch] = useState<any>(null)
-  const [salvageRes, setSalvageRes] = useState<any>(null)
+  const [match, setMatch] = useState<StageResult | null>(null)
+  const [salvageRes, setSalvageRes] = useState<StageResult | null>(null)
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 

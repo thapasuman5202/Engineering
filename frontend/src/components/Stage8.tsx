@@ -1,33 +1,18 @@
 import { useState } from 'react'
 import { getStagePath, postStagePath } from '../lib/api'
+import type { StageResult } from '../lib/StageResult'
 import ErrorMessage from './ErrorMessage'
 
-interface PlanType {
-  stage: number
-  status: string
-  data: {
-    tasks: any[]
-  }
-}
-
-interface TelemetryResponse {
-  stage: number
-  status: string
-  data: {
-    count: number
-  }
-}
-
 export default function Stage8() {
-  const [plan, setPlan] = useState<PlanType | null>(null)
-  const [telemetryRes, setTelemetryRes] = useState<TelemetryResponse | null>(null)
+  const [plan, setPlan] = useState<StageResult | null>(null)
+  const [telemetryRes, setTelemetryRes] = useState<StageResult | null>(null)
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const fetchPlan = async () => {
     try {
       setError(null)
-      const res = (await getStagePath(8, 'plan')) as PlanType
+      const res = await getStagePath(8, 'plan')
       setPlan(res)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
@@ -37,7 +22,7 @@ export default function Stage8() {
   const sendTelemetry = async () => {
     try {
       setError(null)
-      const res = (await postStagePath(8, 'telemetry', { message: input })) as TelemetryResponse
+      const res = await postStagePath(8, 'telemetry', { message: input })
       setTelemetryRes(res)
       setInput('')
     } catch (e) {
