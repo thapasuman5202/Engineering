@@ -1,15 +1,18 @@
 from typing import Any, Dict
-from fastapi import APIRouter
-from app.services import stage10
+from fastapi import APIRouter, Depends
+from app.services.stage10 import Stage10Service
 
 router = APIRouter(prefix="/stage10", tags=["Stage 10"])
 
 
 @router.post("/revenue")
-def revenue(payload: Dict[str, Any]):
-    return stage10.revenue(payload)
+def revenue(
+    payload: Dict[str, Any],
+    service: Stage10Service = Depends(Stage10Service),
+):
+    return service.revenue(payload)
 
 
 @router.get("/resilience")
-def resilience():
-    return stage10.resilience()
+def resilience(service: Stage10Service = Depends(Stage10Service)):
+    return service.resilience()

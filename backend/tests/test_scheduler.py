@@ -2,11 +2,18 @@ import os
 import sys
 import time
 
+import pytest
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from app.services import stage8
+from app.services.stage8 import Stage8Service
 
 
-def test_scheduler_executes_tasks_in_order_and_respects_delay():
+@pytest.fixture()
+def stage8_service() -> Stage8Service:
+    return Stage8Service()
+
+
+def test_scheduler_executes_tasks_in_order_and_respects_delay(stage8_service):
     execution = []
     start = time.time()
 
@@ -16,9 +23,9 @@ def test_scheduler_executes_tasks_in_order_and_respects_delay():
     def task2():
         execution.append(("t2", time.time()))
 
-    stage8.scheduler(task1, delay=0.1)
-    stage8.scheduler(task2)
-    stage8.wait_for_all()
+    stage8_service.scheduler(task1, delay=0.1)
+    stage8_service.scheduler(task2)
+    stage8_service.wait_for_all()
 
     assert [name for name, _ in execution] == ["t1", "t2"]
     assert execution[0][1] - start >= 0.1
