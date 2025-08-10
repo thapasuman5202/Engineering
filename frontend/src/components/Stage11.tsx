@@ -1,15 +1,31 @@
 import { useState } from 'react'
 import { getStagePath, postStagePath } from '../lib/api'
+import ErrorMessage from './ErrorMessage'
 
 export default function Stage11() {
   const [match, setMatch] = useState<any>(null)
   const [salvageRes, setSalvageRes] = useState<any>(null)
   const [input, setInput] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
-  const fetchMatch = async () => setMatch(await getStagePath(11, 'match'))
+  const fetchMatch = async () => {
+    try {
+      setError(null)
+      setMatch(await getStagePath(11, 'match'))
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error'
+      setError(message)
+    }
+  }
   const sendSalvage = async () => {
-    setSalvageRes(await postStagePath(11, 'salvage', { item: input }))
-    setInput('')
+    try {
+      setError(null)
+      setSalvageRes(await postStagePath(11, 'salvage', { item: input }))
+      setInput('')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error'
+      setError(message)
+    }
   }
 
   return (
@@ -20,6 +36,7 @@ export default function Stage11() {
         <input className="border p-1 flex-1" value={input} onChange={e => setInput(e.target.value)} />
         <button className="bg-green-500 text-white px-2 py-1" onClick={sendSalvage}>Send Salvage</button>
       </div>
+      <ErrorMessage message={error} />
       {match && <pre className="mt-2 bg-gray-100 p-2 text-sm">{JSON.stringify(match, null, 2)}</pre>}
       {salvageRes && <pre className="mt-2 bg-gray-100 p-2 text-sm">{JSON.stringify(salvageRes, null, 2)}</pre>}
     </div>
