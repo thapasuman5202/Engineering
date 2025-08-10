@@ -1,14 +1,34 @@
 import { useState } from 'react'
 import { getStagePath, postStagePath } from '../lib/api'
 
+interface PlanType {
+  stage: number
+  status: string
+  data: {
+    tasks: any[]
+  }
+}
+
+interface TelemetryResponse {
+  stage: number
+  status: string
+  data: {
+    count: number
+  }
+}
+
 export default function Stage8() {
-  const [plan, setPlan] = useState<any>(null)
-  const [telemetryRes, setTelemetryRes] = useState<any>(null)
+  const [plan, setPlan] = useState<PlanType | null>(null)
+  const [telemetryRes, setTelemetryRes] = useState<TelemetryResponse | null>(null)
   const [input, setInput] = useState('')
 
-  const fetchPlan = async () => setPlan(await getStagePath(8, 'plan'))
+  const fetchPlan = async () => {
+    const res = (await getStagePath(8, 'plan')) as PlanType
+    setPlan(res)
+  }
   const sendTelemetry = async () => {
-    setTelemetryRes(await postStagePath(8, 'telemetry', { message: input }))
+    const res = (await postStagePath(8, 'telemetry', { message: input })) as TelemetryResponse
+    setTelemetryRes(res)
     setInput('')
   }
 
