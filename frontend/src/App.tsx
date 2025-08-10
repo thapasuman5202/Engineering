@@ -6,6 +6,10 @@ import Stage4 from './components/Stage4'
 import Stage5 from './components/Stage5'
 import Stage6 from './components/Stage6'
 import Stage7 from './components/Stage7'
+import Stage8 from './components/Stage8'
+import Stage9 from './components/Stage9'
+import Stage10 from './components/Stage10'
+import Stage11 from './components/Stage11'
 
 export default function App() {
   return (
@@ -19,6 +23,10 @@ export default function App() {
       <Stage5 />
       <Stage6 />
       <Stage7 />
+      <Stage8 />
+      <Stage9 />
+      <Stage10 />
+      <Stage11 />
     </div>
   )
 }
