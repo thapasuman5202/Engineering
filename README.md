@@ -31,3 +31,12 @@ docker-compose up --build
 ```
 
 The backend will be available at `http://localhost:8000` and the frontend at `http://localhost:5173`.
+
+## Environment Variables
+
+The backend uses `pydantic.BaseSettings` for configuration. Values can be supplied
+via environment variables or a `.env` file in the `backend` directory.
+
+| Variable  | Description                                | Default               |
+|-----------|--------------------------------------------|-----------------------|
+| `APP_NAME` | Title used for the FastAPI application.    | `"God Mode Ultra Flow"` |
