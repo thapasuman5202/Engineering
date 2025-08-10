@@ -33,4 +33,4 @@ app.include_router(stage11.router)
 
 @app.get("/")
 async def root():
-    return {"message": "God Mode Ultra Flow API"}
+    return {"message": f"{settings.app_name} API"}
