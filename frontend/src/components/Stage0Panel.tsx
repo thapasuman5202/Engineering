@@ -87,7 +87,8 @@ export default function Stage0Panel() {
   const resolve = async () => {
     try {
       setError(null)
-      setOutput(await resolveStage0(query))
+      if (!contextId) return
+      setOutput(await resolveStage0(contextId, query))
       setQuery('')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
@@ -98,7 +99,8 @@ export default function Stage0Panel() {
   const counterfactual = async () => {
     try {
       setError(null)
-      setOutput(await counterfactualStage0(scenario))
+      if (!contextId) return
+      setOutput(await counterfactualStage0(contextId, scenario))
       setScenario('')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
