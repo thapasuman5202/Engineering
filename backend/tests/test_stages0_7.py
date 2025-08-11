@@ -15,9 +15,11 @@ def test_stage0_build_context():
 
 
 def test_stage1_endpoint():
-    res = client.get("/stage1")
+    res = client.post("/stage1/generate", json={"n_variants": 2})
     assert res.status_code == 200
-    assert res.json()["stage"] == 1
+    body = res.json()
+    assert body["stage"] == 1
+    assert len(body["data"]["variants"]) == 2
 
 
 def test_stage2_endpoint():
