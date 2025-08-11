@@ -1,4 +1,4 @@
-import Stage0 from './components/Stage0'
+import Stage0Panel from './components/Stage0Panel'
 import Stage1 from './components/Stage1'
 import Stage2 from './components/Stage2'
 import Stage3 from './components/Stage3'
@@ -15,7 +15,7 @@ export default function App() {
   return (
     <div className="p-4 space-y-2">
       <h1 className="text-3xl font-bold mb-4">God Mode Ultra Flow</h1>
-      <Stage0 />
+      <Stage0Panel />
       <Stage1 />
       <Stage2 />
       <Stage3 />
