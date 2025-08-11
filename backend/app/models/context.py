@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LatLon(BaseModel):
@@ -85,7 +85,7 @@ class ExplainItem(BaseModel):
 class AuditBlock(BaseModel):
     """Set of explanatory items with optional versioning."""
 
-    items: List[ExplainItem] = []
+    items: List[ExplainItem] = Field(default_factory=list)
     version: Optional[str] = None
 
 
