@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from shapely.geometry import shape
 from pydantic import BaseModel
 
-from app.models.context import SiteContext, Stage0Request
+from app.models.context import ClimateScen, SiteContext, Stage0Request
 from app.models.stage import StageResult
 from app.services import stage0
 from app.services.stage0_context import build_site_context
@@ -61,26 +61,26 @@ class UploadContextResponse(BaseModel):
 
 class ResolveRequest(BaseModel):
     """Request model for :func:`resolve`."""
-
+    context_id: str
     query: str
 
 
 class ResolveResponse(BaseModel):
     """Resolution result for :func:`resolve`."""
-
     result: str
+    context: SiteContext
 
 
 class CounterfactualRequest(BaseModel):
     """Request payload for :func:`counterfactual`."""
-
+    context_id: str
     scenario: str
 
 
 class CounterfactualResponse(BaseModel):
     """Response payload for :func:`counterfactual`."""
-
     description: str
+    context: SiteContext
 
 
 class PolicyWatchRequest(BaseModel):
@@ -158,15 +158,27 @@ def list_sources() -> List[str]:
 @router.post("/resolve", response_model=ResolveResponse)
 def resolve(req: ResolveRequest) -> ResolveResponse:
     """Resolve a free form query against the context."""
-
-    return ResolveResponse(result=f"resolved: {req.query}")
+    ctx = _CONTEXTS.get(req.context_id)
+    if ctx is None:
+        raise HTTPException(status_code=404, detail="Context not found")
+    result = f"resolved: {req.query}"
+    ctx.resolution = result
+    _CONTEXTS[req.context_id] = ctx
+    return ResolveResponse(result=result, context=ctx)
 
 
 @router.post("/counterfactual", response_model=CounterfactualResponse)
 def counterfactual(req: CounterfactualRequest) -> CounterfactualResponse:
     """Generate a simple counterfactual analysis."""
-
-    return CounterfactualResponse(description=f"counterfactual for {req.scenario}")
+    ctx = _CONTEXTS.get(req.context_id)
+    if ctx is None:
+        raise HTTPException(status_code=404, detail="Context not found")
+    new_req = ctx.request.model_copy(update={"climate_scenario": ClimateScen(req.scenario)})
+    new_ctx = build_site_context(new_req)
+    _CONTEXTS[req.context_id] = new_ctx
+    return CounterfactualResponse(
+        description=f"counterfactual for {req.scenario}", context=new_ctx
+    )
 
 
 @router.post("/policy/watch", response_model=PolicyWatchResponse)
