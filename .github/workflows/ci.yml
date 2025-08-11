@@ -2,7 +2,6 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 jobs:
@@ -15,15 +14,12 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install fastapi uvicorn[standard] pydantic httpx
-      - name: Run API smoke test
+          cd backend
+          pip install -e .
+      - name: Run tests
         run: |
-          PYTHONPATH=backend python - <<'PY'
-from fastapi.testclient import TestClient
-from app.main import app
-client = TestClient(app)
-assert client.get('/stage0').status_code == 200
-PY
+          cd backend
+          pytest
 
   frontend:
     runs-on: ubuntu-latest
