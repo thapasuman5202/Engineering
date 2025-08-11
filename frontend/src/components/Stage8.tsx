@@ -11,7 +11,7 @@ export default function Stage8() {
   const [isFetchingPlan, setIsFetchingPlan] = useState(false)
   const [isSendingTelemetry, setIsSendingTelemetry] = useState(false)
 
-  const withLoading = async <T>(
+  const withLoading = async <T,>(
     action: () => Promise<T>,
     setLoading: (flag: boolean) => void
   ) => {
