@@ -1,0 +1,7 @@
+packages:
+  - "frontend"
+  - "api"
+  - "orchestrator"
+  - "workers"
+  - "feedback-portal"
+  - "shared"
