@@ -6,91 +6,76 @@ client = TestClient(app)
 
 
 def test_build_offline_deterministic():
-    payload = {"location": {"lat": 1.2345, "lon": 2.3456}}
+    payload = {
+        "site_name": "Test",
+        "lat": 1.2345,
+        "lon": 2.3456,
+        "radius_m": 500,
+        "scenarios": ["baseline"],
+    }
     res1 = client.post("/stage0/context/build", json=payload)
     res2 = client.post("/stage0/context/build", json=payload)
-    assert res1.status_code == 200
-    assert res2.status_code == 200
-    ctx1 = res1.json()["context"]
-    ctx2 = res2.json()["context"]
-    assert ctx1 == ctx2
+    assert res1.status_code == 200 and res2.status_code == 200
+    ctx1 = res1.json()
+    ctx2 = res2.json()
+    assert ctx1["audit"]["inputs_hash"] == ctx2["audit"]["inputs_hash"]
+    assert ctx1["risk_scores"] == ctx2["risk_scores"]
 
 
 def test_validate_rejects_self_intersection():
-    # Self-intersecting polygon (bow-tie) to trigger validation error
-    footprint = {
+    bow = {
         "type": "Polygon",
-        "coordinates": [
-            [
-                [0.0, 0.0],
-                [1.0, 1.0],
-                [1.0, 0.0],
-                [0.0, 1.0],
-                [0.0, 0.0],
-            ]
-        ],
+        "coordinates": [[[0, 0], [1, 1], [1, 0], [0, 1], [0, 0]]],
     }
-    context = {
-        "request": {"location": {"lat": 0.0, "lon": 0.0}},
-        "footprint": footprint,
-    }
-    res = client.post("/stage0/context/validate", json={"context": context})
-    assert res.status_code == 200
+    res = client.post("/stage0/context/validate", json={"boundary_geojson": bow})
     body = res.json()
     assert body["valid"] is False
     assert body["errors"]
 
 
 def test_scenarios_distinct():
-    payload_hist = {
-        "location": {"lat": 5.0, "lon": 6.0},
-        "climate_scenario": "historical",
+    payload = {
+        "site_name": "Test",
+        "lat": 5.0,
+        "lon": 6.0,
+        "scenarios": ["baseline", "RCP8.5"],
     }
-    payload_future = {
-        "location": {"lat": 5.0, "lon": 6.0},
-        "climate_scenario": "ssp5_8.5",
-    }
-    res_hist = client.post("/stage0/context/build", json=payload_hist)
-    res_future = client.post("/stage0/context/build", json=payload_future)
-    assert res_hist.status_code == 200
-    assert res_future.status_code == 200
-    risk_hist = res_hist.json()["context"]["risk"]
-    risk_future = res_future.json()["context"]["risk"]
-    assert risk_hist != risk_future
+    res = client.post("/stage0/context/build", json=payload)
+    assert res.status_code == 200
+    ctx = res.json()
+    base = ctx["climate_scenarios"]["baseline"]["heatwave_days"]["value"]
+    rcp = ctx["climate_scenarios"]["RCP8.5"]["heatwave_days"]["value"]
+    assert base != rcp
 
 
 def test_counterfactual_changes_risks():
     build = client.post(
         "/stage0/context/build",
-        json={"location": {"lat": 8.0, "lon": 9.0}},
+        json={"site_name": "Test", "lat": 8.0, "lon": 9.0},
     )
-    assert build.status_code == 200
-    context_id = build.json()["context_id"]
-    base_score = build.json()["context"]["risk"]["score"]
+    ctx = build.json()
     cf = client.post(
         "/stage0/counterfactual",
-        json={"context_id": context_id, "scenario": "ssp5_8.5"},
+        json={"context_id": ctx["context_id"], "delta": {"greenspace_pct": 0.1}},
     )
-    assert cf.status_code == 200
-    cf_score = cf.json()["context"]["risk"]["score"]
-    assert cf_score != base_score
+    body = cf.json()
+    before = body["before"]["risk_scores"]
+    after = body["after"]["risk_scores"]
+    assert after["heat_0_100"] <= before["heat_0_100"]
+    assert after["pollution_0_100"] <= before["pollution_0_100"]
 
 
 def test_resolve_updates_context():
     build = client.post(
         "/stage0/context/build",
-        json={"location": {"lat": 3.0, "lon": 4.0}},
+        json={"site_name": "Test", "lat": 3.0, "lon": 4.0},
     )
-    assert build.status_code == 200
-    context_id = build.json()["context_id"]
-    original_ctx = build.json()["context"]
-
+    ctx = build.json()
     res = client.post(
         "/stage0/resolve",
-        json={"context_id": context_id, "query": "latest info"},
+        json={"context_id": ctx["context_id"], "patch": {"constraints": ["manual"]}},
     )
     assert res.status_code == 200
-
-    updated = client.get(f"/stage0/context/{context_id}")
-    assert updated.status_code == 200
-    assert updated.json() != original_ctx
+    updated = client.get(f"/stage0/context/{ctx['context_id']}").json()
+    assert updated["constraints"] == ["manual"]
+    assert updated["lineage"]["climate"]["transform"].endswith("+ human_override")

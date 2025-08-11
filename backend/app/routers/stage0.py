@@ -1,188 +1,98 @@
-"""API router for Stage 0 context and resolution endpoints."""
+"""Stage 0 ultra context router."""
 
-from __future__ import annotations
-
-from typing import Dict, List, Optional
-from uuid import uuid4
-
-from fastapi import APIRouter, HTTPException
-from shapely.geometry import shape
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
+from typing import Dict, Optional
 
-from app.models.context import ClimateScen, SiteContext, Stage0Request
-from app.models.stage import StageResult
-from app.services import stage0
-from app.services.stage0_context import build_site_context
+from ..models.context import SiteContext, Stage0Request
+from ..services.stage0_context import (
+    CTX_CACHE,
+    build_site_context,
+    validate_boundary,
+    parse_upload,
+    apply_patch,
+    run_counterfactual,
+    policy_watch,
+)
 
-router = APIRouter(prefix="/stage0", tags=["Stage 0"])
-
-
-@router.get("", response_model=StageResult)
-def run(lat: float = 0.0, lon: float = 0.0) -> StageResult:
-    """Run stage 0 context builder."""
-
-    return stage0.run(lat=lat, lon=lon)
-
-# In-memory store for built contexts
-_CONTEXTS: Dict[str, SiteContext] = {}
+router = APIRouter(prefix="/stage0", tags=["Stage0"])
 
 
-class BuildContextResponse(BaseModel):
-    """Response payload for :func:`build_context`."""
-
-    context_id: str
-    context: SiteContext
-
-
-class ValidateContextRequest(BaseModel):
-    """Request body for :func:`validate_context`."""
-
-    context: SiteContext
+@router.post("/context/build", response_model=SiteContext)
+async def build_context(req: Stage0Request) -> SiteContext:
+    """Build a deterministic SiteContext."""
+    return build_site_context(req)
 
 
-class ValidateContextResponse(BaseModel):
-    """Validation outcome returned by :func:`validate_context`."""
-
-    valid: bool
-    errors: List[str] = []
+class BoundaryRequest(BaseModel):
+    boundary_geojson: dict
 
 
-class UploadContextRequest(BaseModel):
-    """Request body for :func:`upload_context`."""
-
-    context_id: str
-
-
-class UploadContextResponse(BaseModel):
-    """Result returned by :func:`upload_context`."""
-
-    uploaded: bool
+@router.post("/context/validate")
+async def validate_ctx(req: BoundaryRequest) -> Dict:
+    """Validate boundary geometry."""
+    return validate_boundary(req.boundary_geojson)
 
 
-class ResolveRequest(BaseModel):
-    """Request model for :func:`resolve`."""
-    context_id: str
-    query: str
-
-
-class ResolveResponse(BaseModel):
-    """Resolution result for :func:`resolve`."""
-    result: str
-    context: SiteContext
-
-
-class CounterfactualRequest(BaseModel):
-    """Request payload for :func:`counterfactual`."""
-    context_id: str
-    scenario: str
-
-
-class CounterfactualResponse(BaseModel):
-    """Response payload for :func:`counterfactual`."""
-    description: str
-    context: SiteContext
-
-
-class PolicyWatchRequest(BaseModel):
-    """Request model for :func:`policy_watch`."""
-
-    policy_id: str
-
-
-class PolicyWatchResponse(BaseModel):
-    """Response model for :func:`policy_watch`."""
-
-    status: str
-
-
-@router.post("/context/build", response_model=BuildContextResponse)
-def build_context(req: Stage0Request) -> BuildContextResponse:
-    """Build and cache a synthetic site context."""
-
-    ctx = build_site_context(req)
-    context_id = uuid4().hex
-    _CONTEXTS[context_id] = ctx
-    return BuildContextResponse(context_id=context_id, context=ctx)
-
-
-@router.post("/context/validate", response_model=ValidateContextResponse)
-def validate_context(req: ValidateContextRequest) -> ValidateContextResponse:
-    """Validate a site context for completeness."""
-
-    errors: List[str] = []
-
-    # Extract any extra fields from the context model (e.g., "footprint")
-    ctx_dict = req.context.model_dump()
-    extra: Optional[Dict] = getattr(req.context, "model_extra", None)
-    if extra:
-        ctx_dict.update(extra)
-
-    geom_data = ctx_dict.get("footprint") or ctx_dict.get("geometry")
-    if geom_data is not None:
-        try:
-            geom = shape(geom_data)
-            if not geom.is_valid:
-                errors.append("Geometry is self-intersecting")
-        except Exception as exc:  # pragma: no cover - defensive
-            errors.append(f"Invalid geometry: {exc}")
-
-    return ValidateContextResponse(valid=not errors, errors=errors)
-
-
-@router.post("/context/upload", response_model=UploadContextResponse)
-def upload_context(req: UploadContextRequest) -> UploadContextResponse:
-    """Upload a previously built context."""
-
-    if req.context_id not in _CONTEXTS:
-        raise HTTPException(status_code=404, detail="Context not found")
-    return UploadContextResponse(uploaded=True)
+@router.post("/context/upload")
+async def upload_boundary(file: UploadFile = File(...)) -> Dict:
+    """Parse an uploaded boundary file."""
+    boundary = parse_upload(file)
+    return {"boundary_geojson": boundary}
 
 
 @router.get("/context/{context_id}", response_model=SiteContext)
-def get_context(context_id: str) -> SiteContext:
-    """Retrieve a cached context by its identifier."""
-
-    ctx = _CONTEXTS.get(context_id)
-    if ctx is None:
+async def get_context(context_id: str) -> SiteContext:
+    """Retrieve a cached context by id."""
+    ctx = CTX_CACHE.get(context_id)
+    if not ctx:
         raise HTTPException(status_code=404, detail="Context not found")
     return ctx
 
 
-@router.get("/sources", response_model=List[str])
-def list_sources() -> List[str]:
-    """List data sources used for context generation."""
+@router.get("/sources")
+async def list_sources() -> Dict:
+    """List available data sources."""
+    return {"online_default": False, "adapters": ["offline_synthetic_v2", "osm_stub", "cmip_stub"]}
 
-    return ["synthetic-data"]
+
+class ResolveRequest(BaseModel):
+    context_id: str
+    patch: Dict
 
 
-@router.post("/resolve", response_model=ResolveResponse)
-def resolve(req: ResolveRequest) -> ResolveResponse:
-    """Resolve a free form query against the context."""
-    ctx = _CONTEXTS.get(req.context_id)
-    if ctx is None:
+@router.post("/resolve", response_model=SiteContext)
+async def resolve_context(req: ResolveRequest) -> SiteContext:
+    """Apply human patch overrides to a context."""
+    ctx = CTX_CACHE.get(req.context_id)
+    if not ctx:
         raise HTTPException(status_code=404, detail="Context not found")
-    result = f"resolved: {req.query}"
-    ctx.resolution = result
-    _CONTEXTS[req.context_id] = ctx
-    return ResolveResponse(result=result, context=ctx)
+    return apply_patch(ctx, req.patch)
 
 
-@router.post("/counterfactual", response_model=CounterfactualResponse)
-def counterfactual(req: CounterfactualRequest) -> CounterfactualResponse:
-    """Generate a simple counterfactual analysis."""
-    ctx = _CONTEXTS.get(req.context_id)
-    if ctx is None:
+class CounterfactualRequest(BaseModel):
+    context_id: str
+    delta: Dict[str, float]
+
+
+@router.post("/counterfactual")
+async def counterfactual(req: CounterfactualRequest) -> Dict:
+    """Run a simple counterfactual analysis."""
+    ctx = CTX_CACHE.get(req.context_id)
+    if not ctx:
         raise HTTPException(status_code=404, detail="Context not found")
-    new_req = ctx.request.model_copy(update={"climate_scenario": ClimateScen(req.scenario)})
-    new_ctx = build_site_context(new_req)
-    _CONTEXTS[req.context_id] = new_ctx
-    return CounterfactualResponse(
-        description=f"counterfactual for {req.scenario}", context=new_ctx
-    )
+    before = ctx
+    after = run_counterfactual(ctx, req.delta)
+    deltas = {k: getattr(after.risk_scores, k) - getattr(before.risk_scores, k) for k in after.risk_scores.model_fields}
+    return {"before": before, "after": after, "deltas": deltas}
 
 
-@router.post("/policy/watch", response_model=PolicyWatchResponse)
-def policy_watch(req: PolicyWatchRequest) -> PolicyWatchResponse:
-    """Register a policy watch on the given identifier."""
+class PolicyWatchRequest(BaseModel):
+    text: Optional[str] = None
+    url: Optional[str] = None
 
-    return PolicyWatchResponse(status=f"watching {req.policy_id}")
+
+@router.post("/policy/watch")
+async def policy_watch_ep(req: PolicyWatchRequest) -> Dict:
+    """Estimate zoning change probability from policy text."""
+    return policy_watch(req.text, req.url)
