@@ -14,6 +14,7 @@ from .context import (
     Stage0Request,
     SiteContext,
 )
+from .generation import Weights, VariantAsset, VariantOut
 
 __all__ = [
     "StageResult",
@@ -30,4 +31,7 @@ __all__ = [
     "AuditBlock",
     "Stage0Request",
     "SiteContext",
+    "Weights",
+    "VariantAsset",
+    "VariantOut",
 ]
