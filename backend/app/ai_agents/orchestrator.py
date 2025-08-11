@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import random
 from dataclasses import dataclass
 from typing import Dict, List, Protocol
@@ -7,7 +8,14 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
-from app.models import SiteContext, Weights, VariantOut
+from app.models import SiteContext, Weights, VariantOut, FeedbackIn
+from app.db.session import SessionLocal
+from app.db.models import (
+    Base,
+    Candidate as DBCandidate,
+    CandidateFeedback,
+    CandidateEmotionEvent,
+)
 
 
 @dataclass
@@ -24,7 +32,11 @@ class Candidate:
 
 
 class DesignState(BaseModel):
-    site: SiteContext | None = None
+    """Mutable state shared across rounds of generation."""
+
+    context: SiteContext | None = None
+    feedback: List[FeedbackIn] = []
+    emotion_stats: Dict[str, float] = {}
     seed: int = 0
     candidates: List[Candidate] = []
 
@@ -32,14 +44,15 @@ class DesignState(BaseModel):
 class Agent(Protocol):
     name: str
 
-    def propose(self, state: DesignState) -> Proposal:
+    async def propose(self, state: DesignState) -> Proposal:
         ...
 
 
 class AestheticsAgent:
     name = "aesthetics"
 
-    def propose(self, state: DesignState) -> Proposal:
+    async def propose(self, state: DesignState) -> Proposal:
+        await asyncio.sleep(0)
         color = random.choice(["red", "blue", "green"])
         return Proposal(type=self.name, data={"color": color})
 
@@ -47,7 +60,8 @@ class AestheticsAgent:
 class SustainabilityAgent:
     name = "sustainability"
 
-    def propose(self, state: DesignState) -> Proposal:
+    async def propose(self, state: DesignState) -> Proposal:
+        await asyncio.sleep(0)
         system = random.choice(["solar", "geothermal"])
         return Proposal(type=self.name, data={"energy": system})
 
@@ -55,7 +69,8 @@ class SustainabilityAgent:
 class CostAgent:
     name = "cost"
 
-    def propose(self, state: DesignState) -> Proposal:
+    async def propose(self, state: DesignState) -> Proposal:
+        await asyncio.sleep(0)
         level = random.choice(["low", "medium", "high"])
         return Proposal(type=self.name, data={"cost_level": level})
 
@@ -63,7 +78,8 @@ class CostAgent:
 class AccessibilityAgent:
     name = "accessibility"
 
-    def propose(self, state: DesignState) -> Proposal:
+    async def propose(self, state: DesignState) -> Proposal:
+        await asyncio.sleep(0)
         feature = random.choice(["ramp", "elevator"])
         return Proposal(type=self.name, data={"feature": feature})
 
@@ -71,7 +87,8 @@ class AccessibilityAgent:
 class StructuralAgent:
     name = "structural"
 
-    def propose(self, state: DesignState) -> Proposal:
+    async def propose(self, state: DesignState) -> Proposal:
+        await asyncio.sleep(0)
         system = random.choice(["steel", "timber"])
         return Proposal(type=self.name, data={"structure": system})
 
@@ -115,12 +132,38 @@ def run_generation(n: int, weights: Weights) -> List[VariantOut]:
         StructuralAgent(),
     ]
 
+    session = SessionLocal()
+    # Ensure tables exist for candidate persistence
+    engine = session.get_bind()
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[
+            DBCandidate.__table__,
+            CandidateFeedback.__table__,
+            CandidateEmotionEvent.__table__,
+        ],
+    )
     variants: List[VariantOut] = []
-    for _ in range(n):
-        proposals = [a.propose(state) for a in agents]
-        candidate = Synthesizer.merge(proposals, state)
+
+    async def generate_round() -> VariantOut:
+        # gather proposals concurrently
+        proposals = await asyncio.gather(*(a.propose(state) for a in agents))
+        candidate = Synthesizer.merge(list(proposals), state)
+        Critic.review(candidate, state)
         scores = score_candidate(candidate, weights)
-        variant = VariantOut(
+        state.candidates.append(candidate)
+
+        # persist candidate
+        db_cand = DBCandidate(
+            id=candidate.id,
+            label=candidate.label,
+            meta=candidate.metadata,
+            scores=scores,
+        )
+        session.add(db_cand)
+        session.commit()
+
+        return VariantOut(
             id=candidate.id,
             label=candidate.label,
             metadata=candidate.metadata,
@@ -128,8 +171,15 @@ def run_generation(n: int, weights: Weights) -> List[VariantOut]:
             rank=0,
             assets=[],
         )
-        variants.append(variant)
-    # assign ranks based on composite score
+
+    async def run_loop():
+        for _ in range(n):
+            variant = await generate_round()
+            variants.append(variant)
+
+    asyncio.run(run_loop())
+    session.close()
+
     variants.sort(key=lambda v: v.score.get("composite", 0), reverse=True)
     for idx, v in enumerate(variants, start=1):
         v.rank = idx
