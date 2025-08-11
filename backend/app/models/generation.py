@@ -16,7 +16,7 @@ class Weights(BaseModel):
 
 
 class VariantAsset(BaseModel):
-    type: Literal['render', 'model', 'pdf', 'json']
+    type: Literal["render", "model", "pdf", "json"]
     path: str
     signed_url: Optional[str] = None
 
@@ -37,6 +37,7 @@ class GenerateRequest(BaseModel):
 
 class JobStatus(str, Enum):
     queued = "queued"
+    running = "running"
     completed = "completed"
     failed = "failed"
 
@@ -56,4 +57,3 @@ class JobEvent(BaseModel):
 class FeedbackIn(BaseModel):
     rating: int
     comment: Optional[str] = None
-

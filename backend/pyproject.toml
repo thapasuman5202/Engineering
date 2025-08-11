@@ -12,7 +12,9 @@ dependencies = [
     "sqlalchemy>=2.0",
     "alembic",
     "python-multipart",
-    "pyjwt"
+    "pyjwt",
+    "celery[redis]",
+    "sse-starlette"
 ]
 
 [build-system]

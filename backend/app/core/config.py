@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"
     cors_origins: list[str] = ["*"]
+    redis_url: str = "redis://redis:6379/0"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
