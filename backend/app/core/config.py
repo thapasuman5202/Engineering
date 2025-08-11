@@ -6,6 +6,9 @@ class Settings(BaseSettings):
 
     app_name: str = "God Mode Ultra Flow"
     database_url: str = "sqlite:///./app.db"
+    secret_key: str = "change-me"
+    jwt_algorithm: str = "HS256"
+    cors_origins: list[str] = ["*"]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
