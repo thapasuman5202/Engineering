@@ -1,0 +1,18 @@
+{
+  "name": "engineering-monorepo",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "api",
+    "orchestrator",
+    "workers",
+    "feedback-portal",
+    "shared"
+  ],
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.1.1"
+  }
+}

@@ -1,8 +1,8 @@
 FROM node:18-alpine
 WORKDIR /app
-COPY package.json tsconfig.json vite.config.ts tailwind.config.js postcss.config.js ./
-RUN npm install
-COPY src ./src
-RUN npm run build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY frontend ./frontend
+RUN corepack enable && pnpm install --frozen-lockfile
+RUN pnpm --filter frontend build
 EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["pnpm", "--filter", "frontend", "dev", "--", "--host"]
