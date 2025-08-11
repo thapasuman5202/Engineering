@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
+from app.db.session import get_db
 from app.routers import (
     stage0,
     stage1,
@@ -32,5 +35,5 @@ app.include_router(stage11.router)
 
 
 @app.get("/")
-async def root():
+async def root(db: Session = Depends(get_db)):
     return {"message": f"{settings.app_name} API"}
