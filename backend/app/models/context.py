@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class LatLon(BaseModel):
@@ -99,7 +99,7 @@ class Stage0Request(BaseModel):
 
 class SiteContext(BaseModel):
     """Aggregated context for a site including risk and metadata."""
-
+    model_config = ConfigDict(extra="allow")
     request: Stage0Request
     risk: Optional[RiskScores] = None
     zoning: Optional[ZoningDrift] = None
