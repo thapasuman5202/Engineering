@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
+from shapely.geometry import shape
 from pydantic import BaseModel
 
 from app.models.context import SiteContext, Stage0Request
@@ -108,8 +109,24 @@ def build_context(req: Stage0Request) -> BuildContextResponse:
 def validate_context(req: ValidateContextRequest) -> ValidateContextResponse:
     """Validate a site context for completeness."""
 
-    # This demo always considers the context valid.
-    return ValidateContextResponse(valid=True)
+    errors: List[str] = []
+
+    # Extract any extra fields from the context model (e.g., "footprint")
+    ctx_dict = req.context.model_dump()
+    extra: Optional[Dict] = getattr(req.context, "model_extra", None)
+    if extra:
+        ctx_dict.update(extra)
+
+    geom_data = ctx_dict.get("footprint") or ctx_dict.get("geometry")
+    if geom_data is not None:
+        try:
+            geom = shape(geom_data)
+            if not geom.is_valid:
+                errors.append("Geometry is self-intersecting")
+        except Exception as exc:  # pragma: no cover - defensive
+            errors.append(f"Invalid geometry: {exc}")
+
+    return ValidateContextResponse(valid=not errors, errors=errors)
 
 
 @router.post("/context/upload", response_model=UploadContextResponse)
