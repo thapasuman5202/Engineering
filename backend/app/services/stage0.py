@@ -1,14 +1,13 @@
-"""Service functions for Stage 0 context ingestion."""
+"""Service functions for Stage 0 context generation."""
 
 from app.models.stage import StageResult
+from app.models.context import Stage0Request, LatLon
+from .stage0_context import build_site_context
 
 
-def run() -> StageResult:
-    """Ingest initial context for the workflow.
+def run(lat: float = 0.0, lon: float = 0.0) -> StageResult:
+    """Build the site context used to initialise the workflow."""
 
-    Returns:
-        StageResult: Outcome of the ingestion step with a status message.
-    """
-
-    data = {"message": "context ingested"}
-    return StageResult(stage=0, status="context ingested", data=data)
+    req = Stage0Request(location=LatLon(lat=lat, lon=lon))
+    ctx = build_site_context(req)
+    return StageResult(stage=0, status="context built", data=ctx.model_dump())
