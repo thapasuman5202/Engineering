@@ -1,128 +1,118 @@
 import { useState } from 'react'
-import ErrorMessage from './ErrorMessage'
 import {
   buildStage0Context,
-  validateStage0Context,
-  uploadStage0Context,
+  validateGeometry,
+  uploadBoundary,
   getStage0Context,
-  listStage0Sources,
-  resolveStage0,
   counterfactualStage0,
-  policyWatchStage0,
+  resolveStage0,
 } from '../lib/api'
+import ErrorMessage from './ErrorMessage'
 
 export default function Stage0Panel() {
+  const [siteName, setSiteName] = useState('')
   const [lat, setLat] = useState('')
   const [lon, setLon] = useState('')
+  const [radius, setRadius] = useState('500')
+  const [boundary, setBoundary] = useState('')
+  const [brief, setBrief] = useState('')
+  const [online, setOnline] = useState(false)
+  const [scenarios, setScenarios] = useState<string[]>(['baseline'])
+
+  const [context, setContext] = useState<any | null>(null)
   const [contextId, setContextId] = useState('')
-  const [context, setContext] = useState<unknown | null>(null)
-  const [output, setOutput] = useState<unknown | null>(null)
-
-  const [query, setQuery] = useState('')
-  const [scenario, setScenario] = useState('')
-  const [policy, setPolicy] = useState('')
-
+  const [output, setOutput] = useState<any | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const build = async () => {
-    try {
-      setError(null)
-      const res = await buildStage0Context({
-        location: { lat: parseFloat(lat), lon: parseFloat(lon) },
-      })
-      setContextId(res.context_id)
-      setContext(res.context)
-      setOutput(res)
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Unknown error'
-      setError(message)
-    }
+  const toggleScenario = (s: string) => {
+    setScenarios(prev =>
+      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+    )
   }
 
   const validate = async () => {
     try {
-      if (!context) return
       setError(null)
-      setOutput(await validateStage0Context(context))
+      const gj = JSON.parse(boundary)
+      setOutput(await validateGeometry(gj))
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Unknown error'
-      setError(message)
+      setError('invalid geojson')
     }
   }
 
-  const upload = async () => {
+  const upload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
     try {
-      if (!contextId) return
-      setError(null)
-      setOutput(await uploadStage0Context(contextId))
+      const res = await uploadBoundary(files[0])
+      setBoundary(JSON.stringify(res.boundary_geojson, null, 2))
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Unknown error'
-      setError(message)
+      setError('upload failed')
     }
   }
 
-  const fetchCtx = async () => {
+  const build = async () => {
     try {
-      if (!contextId) return
       setError(null)
-      const res = await getStage0Context(contextId)
+      const req: any = {
+        site_name: siteName,
+        brief,
+        online,
+        scenarios,
+      }
+      if (boundary.trim()) req.boundary_geojson = JSON.parse(boundary)
+      else {
+        req.lat = parseFloat(lat)
+        req.lon = parseFloat(lon)
+        req.radius_m = parseInt(radius)
+      }
+      const res = await buildStage0Context(req)
       setContext(res)
-      setOutput(res)
+      setContextId(res.context_id)
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Unknown error'
-      setError(message)
-    }
-  }
-
-  const sources = async () => {
-    try {
-      setError(null)
-      setOutput(await listStage0Sources())
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Unknown error'
-      setError(message)
-    }
-  }
-
-  const resolve = async () => {
-    try {
-      setError(null)
-      if (!contextId) return
-      setOutput(await resolveStage0(contextId, query))
-      setQuery('')
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Unknown error'
-      setError(message)
+      setError('build failed')
     }
   }
 
   const counterfactual = async () => {
+    if (!contextId) return
     try {
-      setError(null)
-      if (!contextId) return
-      setOutput(await counterfactualStage0(contextId, scenario))
-      setScenario('')
+      setOutput(await counterfactualStage0(contextId, { greenspace_pct: 0.1 }))
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Unknown error'
-      setError(message)
+      setError('counterfactual failed')
     }
   }
 
-  const policyWatch = async () => {
+  const resolve = async () => {
+    if (!contextId) return
     try {
-      setError(null)
-      setOutput(await policyWatchStage0(policy))
-      setPolicy('')
+      const res = await resolveStage0(contextId, {
+        constraints: ['manual override'],
+      })
+      setContext(res)
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Unknown error'
-      setError(message)
+      setError('resolve failed')
     }
+  }
+
+  const copyId = async () => {
+    if (contextId) await navigator.clipboard.writeText(contextId)
+  }
+
+  const loadContext = async () => {
+    if (!contextId) return
+    setContext(await getStage0Context(contextId))
   }
 
   return (
     <div className="p-2 border rounded mb-2">
-      <h2 className="font-bold">Stage 0 (Ultra)</h2>
+      <h2 className="font-bold mb-2">Stage 0 (Ultra)</h2>
       <div className="space-y-2">
+        <input
+          className="border p-1 w-full"
+          placeholder="Site Name"
+          value={siteName}
+          onChange={e => setSiteName(e.target.value)}
+        />
         <div className="flex space-x-2">
           <input
             className="border p-1 w-24"
@@ -136,94 +126,104 @@ export default function Stage0Panel() {
             value={lon}
             onChange={e => setLon(e.target.value)}
           />
-          <button className="bg-blue-500 text-white px-2 py-1" onClick={build}>
+          <input
+            className="border p-1 w-24"
+            placeholder="radius m"
+            value={radius}
+            onChange={e => setRadius(e.target.value)}
+          />
+        </div>
+        <textarea
+          className="border p-1 w-full h-24"
+          placeholder="boundary geojson"
+          value={boundary}
+          onChange={e => setBoundary(e.target.value)}
+        />
+        <input type="file" onChange={e => upload(e.target.files)} />
+        <input
+          className="border p-1 w-full"
+          placeholder="brief"
+          value={brief}
+          onChange={e => setBrief(e.target.value)}
+        />
+        <div className="flex space-x-2 items-center">
+          <label>
+            <input
+              type="checkbox"
+              checked={scenarios.includes('baseline')}
+              onChange={() => toggleScenario('baseline')}
+            />{' '}
+            Baseline
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={scenarios.includes('RCP4.5')}
+              onChange={() => toggleScenario('RCP4.5')}
+            />{' '}
+            RCP4.5
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={scenarios.includes('RCP8.5')}
+              onChange={() => toggleScenario('RCP8.5')}
+            />{' '}
+            RCP8.5
+          </label>
+          <label className="ml-4">
+            <input
+              type="checkbox"
+              checked={online}
+              onChange={e => setOnline(e.target.checked)}
+            />{' '}
+            online
+          </label>
+        </div>
+        <div className="flex space-x-2">
+          <button className="bg-blue-500 text-white px-2" onClick={validate}>
+            Validate Geometry
+          </button>
+          <button className="bg-blue-500 text-white px-2" onClick={build}>
             Build Context
           </button>
-          <button
-            className="bg-blue-500 text-white px-2 py-1"
-            onClick={validate}
-          >
-            Validate
+          <button className="bg-blue-500 text-white px-2" onClick={counterfactual}>
+            Counterfactual (+greenspace)
           </button>
-          <button
-            className="bg-blue-500 text-white px-2 py-1"
-            onClick={upload}
-          >
-            Upload
-          </button>
-        </div>
-        <div className="flex space-x-2">
-          <input
-            className="border p-1 flex-1"
-            placeholder="context id"
-            value={contextId}
-            onChange={e => setContextId(e.target.value)}
-          />
-          <button
-            className="bg-blue-500 text-white px-2 py-1"
-            onClick={fetchCtx}
-          >
-            Get Context
-          </button>
-          <button
-            className="bg-blue-500 text-white px-2 py-1"
-            onClick={sources}
-          >
-            List Sources
-          </button>
-        </div>
-        <div className="flex space-x-2">
-          <input
-            className="border p-1 flex-1"
-            placeholder="query"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-          />
-          <button className="bg-blue-500 text-white px-2 py-1" onClick={resolve}>
+          <button className="bg-blue-500 text-white px-2" onClick={resolve}>
             Resolve
           </button>
         </div>
-        <div className="flex space-x-2">
-          <input
-            className="border p-1 flex-1"
-            placeholder="scenario"
-            value={scenario}
-            onChange={e => setScenario(e.target.value)}
-          />
-          <button
-            className="bg-blue-500 text-white px-2 py-1"
-            onClick={counterfactual}
-          >
-            Counterfactual
-          </button>
-        </div>
-        <div className="flex space-x-2">
-          <input
-            className="border p-1 flex-1"
-            placeholder="policy id"
-            value={policy}
-            onChange={e => setPolicy(e.target.value)}
-          />
-          <button
-            className="bg-blue-500 text-white px-2 py-1"
-            onClick={policyWatch}
-          >
-            Policy Watch
-          </button>
-        </div>
-        <ErrorMessage message={error} />
         {context && (
-          <pre className="mt-2 bg-gray-100 p-2 text-sm">
-            {JSON.stringify(context, null, 2)}
-          </pre>
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2">
+              <span className="font-mono text-sm">{context.context_id}</span>
+              <button className="bg-gray-200 px-1" onClick={copyId}>
+                copy
+              </button>
+              <button className="bg-gray-200 px-1" onClick={loadContext}>
+                refresh
+              </button>
+            </div>
+            <div className="flex space-x-2">
+              {Object.entries(context.risk_scores).map(([k, v]) => (
+                <span key={k} className="px-2 py-1 bg-gray-100 text-xs">
+                  {k}:{v as number}
+                </span>
+              ))}
+            </div>
+            <pre className="bg-gray-100 p-2 text-xs overflow-auto h-64">
+              {JSON.stringify(context, null, 2)}
+            </pre>
+          </div>
         )}
         {output && (
-          <pre className="mt-2 bg-gray-100 p-2 text-sm">
+          <pre className="bg-gray-100 p-2 text-xs overflow-auto h-40">
             {JSON.stringify(output, null, 2)}
           </pre>
         )}
+        <ErrorMessage message={error} />
       </div>
     </div>
   )
 }
-

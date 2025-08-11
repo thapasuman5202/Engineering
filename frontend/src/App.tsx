@@ -1,3 +1,4 @@
+// App entry with Stage 0 Ultra panel
 import Stage0Panel from './components/Stage0Panel'
 import Stage1 from './components/Stage1'
 import Stage2 from './components/Stage2'

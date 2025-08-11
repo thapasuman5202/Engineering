@@ -6,12 +6,12 @@ client = TestClient(app)
 
 
 def test_stage0_build_context():
-    payload = {"location": {"lat": 1.0, "lon": 2.0}}
+    payload = {"site_name": "X", "lat": 1.0, "lon": 2.0}
     res = client.post("/stage0/context/build", json=payload)
     assert res.status_code == 200
     body = res.json()
-    assert "context_id" in body
-    assert body["context"]["request"]["location"]["lat"] == 1.0
+    assert body["context_id"]
+    assert abs(body["centroid"]["lat"] - 1.0) < 1e-6
 
 
 def test_stage1_endpoint():
