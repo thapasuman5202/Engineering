@@ -103,21 +103,25 @@ export async function listStage0Sources(): Promise<string[]> {
   return fetchJson(`${API_BASE}/stage0/sources`)
 }
 
-export async function resolveStage0(query: string): Promise<ResolveResponse> {
+export async function resolveStage0(
+  context_id: string,
+  query: string
+): Promise<ResolveResponse> {
   return fetchJson(`${API_BASE}/stage0/resolve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ context_id, query }),
   })
 }
 
 export async function counterfactualStage0(
+  context_id: string,
   scenario: string
 ): Promise<CounterfactualResponse> {
   return fetchJson(`${API_BASE}/stage0/counterfactual`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ scenario }),
+    body: JSON.stringify({ context_id, scenario }),
   })
 }
 
