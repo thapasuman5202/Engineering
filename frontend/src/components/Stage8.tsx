@@ -4,25 +4,23 @@ import type { StageResult } from '../lib/StageResult'
 import ErrorMessage from './ErrorMessage'
 
 interface PlanData {
-  tasks: any[]
+  tasks: unknown[]
 }
-type PlanType = StageResult & { data: PlanData }
 
 interface TelemetryData {
   count: number
 }
-type TelemetryResponse = StageResult & { data: TelemetryData }
 
 export default function Stage8() {
-  const [plan, setPlan] = useState<PlanType | null>(null)
-  const [telemetryRes, setTelemetryRes] = useState<TelemetryResponse | null>(null)
+  const [plan, setPlan] = useState<StageResult<PlanData> | null>(null)
+  const [telemetryRes, setTelemetryRes] = useState<StageResult<TelemetryData> | null>(null)
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const fetchPlan = async () => {
     try {
       setError(null)
-      const res = await getStagePath<PlanType>(8, 'plan')
+      const res = await getStagePath<PlanData>(8, 'plan')
       setPlan(res)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
@@ -32,7 +30,7 @@ export default function Stage8() {
   const sendTelemetry = async () => {
     try {
       setError(null)
-      const res = await postStagePath<TelemetryResponse>(8, 'telemetry', { message: input })
+      const res = await postStagePath<TelemetryData>(8, 'telemetry', { message: input })
       setTelemetryRes(res)
       setInput('')
     } catch (e) {

@@ -12,7 +12,7 @@ export default function Stage9() {
   const fetchWellness = async () => {
     try {
       setError(null)
-      setWellness(await getStagePath<StageResult>(9, 'wellness'))
+      setWellness(await getStagePath(9, 'wellness'))
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
       setError(message)
@@ -21,7 +21,7 @@ export default function Stage9() {
   const sendTuning = async () => {
     try {
       setError(null)
-      setTuningRes(await postStagePath<StageResult>(9, 'tuning', { value: input }))
+      setTuningRes(await postStagePath(9, 'tuning', { value: input }))
       setInput('')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'

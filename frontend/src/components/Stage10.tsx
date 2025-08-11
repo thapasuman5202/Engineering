@@ -12,7 +12,7 @@ export default function Stage10() {
   const fetchResilience = async () => {
     try {
       setError(null)
-      setResilience(await getStagePath<StageResult>(10, 'resilience'))
+      setResilience(await getStagePath(10, 'resilience'))
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
       setError(message)
@@ -21,7 +21,7 @@ export default function Stage10() {
   const sendRevenue = async () => {
     try {
       setError(null)
-      setRevenueRes(await postStagePath<StageResult>(10, 'revenue', { value: input }))
+      setRevenueRes(await postStagePath(10, 'revenue', { value: input }))
       setInput('')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'

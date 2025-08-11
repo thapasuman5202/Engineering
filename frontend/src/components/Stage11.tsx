@@ -12,7 +12,7 @@ export default function Stage11() {
   const fetchMatch = async () => {
     try {
       setError(null)
-      setMatch(await getStagePath<StageResult>(11, 'match'))
+      setMatch(await getStagePath(11, 'match'))
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
       setError(message)
@@ -21,7 +21,7 @@ export default function Stage11() {
   const sendSalvage = async () => {
     try {
       setError(null)
-      setSalvageRes(await postStagePath<StageResult>(11, 'salvage', { item: input }))
+      setSalvageRes(await postStagePath(11, 'salvage', { item: input }))
       setInput('')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'

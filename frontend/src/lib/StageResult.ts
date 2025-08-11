@@ -1,5 +1,5 @@
-export interface StageResult {
-  stage: number;
-  status: string;
-  data?: unknown;
+export interface StageResult<T = unknown> {
+  stage: number
+  status: string
+  data?: T
 }
