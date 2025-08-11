@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { getStagePath, postStagePath } from '../lib/api'
-import type { StageResult } from '../lib/StageResult'
 import ErrorMessage from './ErrorMessage'
 
 interface PlanData {
-  tasks: unknown[]
+  tasks: string[]
 }
 
 interface TelemetryData {
@@ -12,8 +11,8 @@ interface TelemetryData {
 }
 
 export default function Stage8() {
-  const [plan, setPlan] = useState<StageResult<PlanData> | null>(null)
-  const [telemetryRes, setTelemetryRes] = useState<StageResult<TelemetryData> | null>(null)
+  const [plan, setPlan] = useState<PlanData | null>(null)
+  const [telemetry, setTelemetry] = useState<TelemetryData | null>(null)
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -21,7 +20,7 @@ export default function Stage8() {
     try {
       setError(null)
       const res = await getStagePath<PlanData>(8, 'plan')
-      setPlan(res)
+      setPlan(res.data)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
       setError(message)
@@ -31,7 +30,7 @@ export default function Stage8() {
     try {
       setError(null)
       const res = await postStagePath<TelemetryData>(8, 'telemetry', { message: input })
-      setTelemetryRes(res)
+      setTelemetry(res.data)
       setInput('')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
@@ -48,8 +47,16 @@ export default function Stage8() {
         <button className="bg-green-500 text-white px-2 py-1" onClick={sendTelemetry}>Send Telemetry</button>
       </div>
       <ErrorMessage message={error} />
-      {plan && <pre className="mt-2 bg-gray-100 p-2 text-sm">{JSON.stringify(plan, null, 2)}</pre>}
-      {telemetryRes && <pre className="mt-2 bg-gray-100 p-2 text-sm">{JSON.stringify(telemetryRes, null, 2)}</pre>}
+      {plan && (
+        <pre className="mt-2 bg-gray-100 p-2 text-sm">
+          {JSON.stringify(plan, null, 2)}
+        </pre>
+      )}
+      {telemetry && (
+          <pre className="mt-2 bg-gray-100 p-2 text-sm">
+            {JSON.stringify(telemetry, null, 2)}
+          </pre>
+      )}
     </div>
   )
 }
