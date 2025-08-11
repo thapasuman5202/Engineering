@@ -9,9 +9,18 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.models.context import SiteContext, Stage0Request
+from app.models.stage import StageResult
+from app.services import stage0
 from app.services.stage0_context import build_site_context
 
 router = APIRouter(prefix="/stage0", tags=["Stage 0"])
+
+
+@router.get("", response_model=StageResult)
+def run(lat: float = 0.0, lon: float = 0.0) -> StageResult:
+    """Run stage 0 context builder."""
+
+    return stage0.run(lat=lat, lon=lon)
 
 # In-memory store for built contexts
 _CONTEXTS: Dict[str, SiteContext] = {}
