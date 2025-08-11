@@ -14,7 +14,16 @@ from .context import (
     Stage0Request,
     SiteContext,
 )
-from .generation import Weights, VariantAsset, VariantOut
+from .generation import (
+    Weights,
+    VariantAsset,
+    VariantOut,
+    GenerateRequest,
+    JobOut,
+    JobEvent,
+    JobStatus,
+    FeedbackIn,
+)
 
 __all__ = [
     "StageResult",
@@ -34,4 +43,9 @@ __all__ = [
     "Weights",
     "VariantAsset",
     "VariantOut",
+    "GenerateRequest",
+    "JobOut",
+    "JobEvent",
+    "JobStatus",
+    "FeedbackIn",
 ]
